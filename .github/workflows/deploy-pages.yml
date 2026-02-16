@@ -1,5 +1,6 @@
 name: Deploy static site to GitHub Pages
 
+
 on:
   push:
     branches: ["main"]
@@ -31,7 +32,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
-
+          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
