@@ -1,0 +1,31 @@
+[
+  {
+    "title": "エコーストーン",
+    "type": "daily"
+  },
+  {
+    "title": "グラマス",
+    "type": "daily"
+  },
+  {
+    "title": "昇段",
+    "type": "daily"
+  },
+  {
+    "title": "光る玉（せめて回収）",
+    "type": "daily"
+  },
+  {
+    "title": "アド回収",
+    "type": "daily"
+  },
+  {
+    "title": "ネアル消化",
+    "type": "weekly",
+    "cooldownDays": 7
+  },
+  {
+    "title": "ファメス",
+    "type": "monthly"
+  }
+]
