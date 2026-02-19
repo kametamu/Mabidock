@@ -16,6 +16,10 @@
     "type": "daily"
   },
   {
+    "title": "アド回収",
+    "type": "daily"
+  },
+  {
     "title": "ネアル消化",
     "type": "weekly",
     "cooldownDays": 7

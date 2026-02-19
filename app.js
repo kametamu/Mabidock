@@ -9,6 +9,14 @@ const routes = {
 };
 
 const cache = new Map();
+const dailiesState = {
+  typeActive: {
+    daily: true,
+    weekly: true,
+    monthly: true,
+  },
+  hiddenItems: new Set(),
+};
 
 async function loadJson(path) {
   if (cache.has(path)) return cache.get(path);
@@ -141,31 +149,95 @@ async function renderMoney() {
   `;
 }
 
+function buildDailiesFilterControls() {
+  const types = ['daily', 'weekly', 'monthly'];
+  return `
+    <section class="card dailies-controls">
+      <h3 class="section-title">表示フィルター（アクティブ / 非アクティブ）</h3>
+      <div class="toggle-row">
+        ${types
+          .map(
+            (type) => `
+            <button
+              class="toggle-chip ${dailiesState.typeActive[type] ? 'on' : 'off'}"
+              type="button"
+              data-type-toggle="${type}"
+            >
+              ${escapeHtml(type)}: ${dailiesState.typeActive[type] ? 'アクティブ' : '非アクティブ'}
+            </button>
+          `,
+          )
+          .join('')}
+      </div>
+      <p class="section-content">「完了して非表示」を押した項目は、このページを開いている間だけ非表示になります。再読込すると元に戻ります。</p>
+    </section>
+  `;
+}
+
+function bindDailiesControls() {
+  appRoot.querySelectorAll('[data-type-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const type = button.getAttribute('data-type-toggle');
+      dailiesState.typeActive[type] = !dailiesState.typeActive[type];
+      renderDailies();
+    });
+  });
+
+  appRoot.querySelectorAll('[data-hide-item]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const itemId = button.getAttribute('data-hide-item');
+      dailiesState.hiddenItems.add(itemId);
+      renderDailies();
+    });
+  });
+
+  const resetButton = appRoot.querySelector('[data-reset-hidden]');
+  if (resetButton) {
+    resetButton.addEventListener('click', () => {
+      dailiesState.hiddenItems.clear();
+      renderDailies();
+    });
+  }
+}
+
 async function renderDailies() {
   const data = await loadJson('./data/dailies.json');
+  const withIds = data.map((item, index) => ({
+    ...item,
+    itemId: `${item.type}:${index}:${item.title}`,
+  }));
+
+  const visible = withIds.filter((item) => dailiesState.typeActive[item.type] && !dailiesState.hiddenItems.has(item.itemId));
 
   appRoot.innerHTML = `
     ${pageHeader('日課', 'daily / weekly / monthly を見やすく表示します。')}
+    ${buildDailiesFilterControls()}
+    <section class="toolbar-row">
+      <button type="button" class="reset-button" data-reset-hidden>非表示を全て戻す</button>
+      <p class="section-content">表示中: ${visible.length} / 全体: ${data.length}</p>
+    </section>
     <section class="card-grid">
-      ${data
-        .map(
-          (item) => `
+      ${visible
+        .map((item) => {
+          return `
           <article class="card">
             <span class="tag ${escapeHtml(item.type)}">${escapeHtml(item.type)}</span>
             <h3>${escapeHtml(item.title)}</h3>
             ${item.note ? `<p>${escapeHtml(item.note)}</p>` : ''}
             ${item.cooldownDays ? `<p class="section-content">cooldown: ${item.cooldownDays}日</p>` : ''}
+            <button type="button" class="hide-button" data-hide-item="${escapeHtml(item.itemId)}">完了して非表示</button>
           </article>
-        `,
-        )
+        `;
+        })
         .join('')}
     </section>
   `;
+
+  bindDailiesControls();
 }
 
 async function renderRoute() {
   const path = getHashPath();
-  const route = routes[path] || routes['/home'];
 
   if (!routes[path]) {
     window.location.hash = '#/home';
@@ -175,7 +247,7 @@ async function renderRoute() {
   setActiveLink(path);
 
   try {
-    await route();
+    await routes[path]();
   } catch (error) {
     appRoot.innerHTML = `
       ${pageHeader('表示エラー', 'データの読み込みに失敗しました。')}
