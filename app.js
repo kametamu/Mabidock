@@ -11,9 +11,9 @@ const routes = {
 const cache = new Map();
 const dailiesState = {
   typeActive: {
-    daily: true,
-    weekly: true,
-    monthly: true,
+    daily: false,
+    weekly: false,
+    monthly: false,
   },
   hiddenItems: new Set(),
 };
@@ -26,7 +26,7 @@ const trainingTagClassMap = {
   ペット: 'training-pet',
 };
 const trainingState = {
-  tagActive: Object.fromEntries(trainingTags.map((tag) => [tag, true])),
+  tagActive: Object.fromEntries(trainingTags.map((tag) => [tag, false])),
   openItems: new Set(),
 };
 
@@ -218,6 +218,7 @@ function buildTrainingTagControls() {
           )
           .join('')}
       </div>
+      <p class="section-content">未選択時は全表示、1つ以上選択時は選択タグに一致する項目のみ表示します。</p>
     </section>
   `;
 }
@@ -251,7 +252,8 @@ async function renderTraining() {
   }));
   const activeTags = trainingTags.filter((tag) => trainingState.tagActive[tag]);
   const visible = withIds.filter((item) => {
-    if (!Array.isArray(item.tags) || item.tags.length === 0) return true;
+    if (activeTags.length === 0) return true;
+    if (!Array.isArray(item.tags) || item.tags.length === 0) return false;
     return item.tags.some((tag) => activeTags.includes(tag));
   });
 
@@ -320,6 +322,7 @@ function buildDailiesFilterControls() {
           )
           .join('')}
       </div>
+      <p class="section-content">未選択時は全表示、1つ以上選択時は選択タグに一致する項目のみ表示します。</p>
       <p class="section-content">「完了して非表示」を押した項目は、このページを開いている間だけ非表示になります。再読込すると元に戻ります。</p>
     </section>
   `;
@@ -358,7 +361,14 @@ async function renderDailies() {
     itemId: `${item.type}:${index}:${item.title}`,
   }));
 
-  const visible = withIds.filter((item) => dailiesState.typeActive[item.type] && !dailiesState.hiddenItems.has(item.itemId));
+  const activeTypes = Object.entries(dailiesState.typeActive)
+    .filter(([, isActive]) => isActive)
+    .map(([type]) => type);
+
+  const visible = withIds.filter((item) => {
+    const passesTagFilter = activeTypes.length === 0 || activeTypes.includes(item.type);
+    return passesTagFilter && !dailiesState.hiddenItems.has(item.itemId);
+  });
 
   appRoot.innerHTML = `
     ${pageHeader('日課', 'daily / weekly / monthly を見やすく表示します。')}
