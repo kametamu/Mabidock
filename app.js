@@ -18,6 +18,13 @@ const dailiesState = {
   hiddenItems: new Set(),
 };
 const trainingTags = ['メイン', 'サブ', 'アルカナ', 'スキル', 'ペット'];
+const trainingTagClassMap = {
+  メイン: 'training-main',
+  サブ: 'training-sub',
+  アルカナ: 'training-arcana',
+  スキル: 'training-skill',
+  ペット: 'training-pet',
+};
 const trainingState = {
   tagActive: Object.fromEntries(trainingTags.map((tag) => [tag, true])),
   openItems: new Set(),
@@ -264,9 +271,12 @@ async function renderTraining() {
             }>
               <summary>
                 <h3>${escapeHtml(entry.title)}</h3>
-                <div class="inline-tags">
+                <div class="item-tags">
                   ${(Array.isArray(entry.tags) ? entry.tags : [])
-                    .map((tag) => `<span class="tag training-tag">${escapeHtml(tag)}</span>`)
+                    .map(
+                      (tag) =>
+                        `<span class="tag ${escapeHtml(trainingTagClassMap[tag] ?? 'training-main')}">${escapeHtml(tag)}</span>`,
+                    )
                     .join('')}
                 </div>
               </summary>
@@ -294,7 +304,7 @@ function buildDailiesFilterControls() {
   const types = ['daily', 'weekly', 'monthly'];
   return `
     <section class="card dailies-controls">
-      <h3 class="section-title">表示フィルター（アクティブ / 非アクティブ）</h3>
+      <h3 class="section-title">タグで絞り込み</h3>
       <div class="toggle-row">
         ${types
           .map(
@@ -304,7 +314,7 @@ function buildDailiesFilterControls() {
               type="button"
               data-type-toggle="${type}"
             >
-              ${escapeHtml(type)}: ${dailiesState.typeActive[type] ? 'アクティブ' : '非アクティブ'}
+              ${escapeHtml(type)}
             </button>
           `,
           )

@@ -173,14 +173,39 @@ body {
   padding: 5px 12px;
 }
 
-.inline-tags {
+.item-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.training-tag {
+.item-tags .tag {
   margin: 0;
+}
+
+.tag.training-main {
+  background: color-mix(in oklab, #38bdf8 25%, black);
+  color: #e0f2fe;
+}
+
+.tag.training-sub {
+  background: color-mix(in oklab, #22c55e 25%, black);
+  color: #dcfce7;
+}
+
+.tag.training-arcana {
+  background: color-mix(in oklab, #f97316 25%, black);
+  color: #ffedd5;
+}
+
+.tag.training-skill {
+  background: color-mix(in oklab, #a855f7 25%, black);
+  color: #f3e8ff;
+}
+
+.tag.training-pet {
+  background: color-mix(in oklab, #f43f5e 25%, black);
+  color: #ffe4e6;
 }
 
 .training-details {
