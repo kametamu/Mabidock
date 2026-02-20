@@ -101,7 +101,7 @@ async function renderHome() {
             (item) => `
             <article class="card">
               <h3>${escapeHtml(item.title)}</h3>
-              <p>${escapeHtml(item.description)}</p>
+              <p class="${item.description === 'Do you know HamPachino ?' ? 'rainbow-blink' : ''}">${escapeHtml(item.description)}</p>
               <a
                 class="card-link"
                 href="${escapeHtml(item.url)}"

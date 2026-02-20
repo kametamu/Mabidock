@@ -114,6 +114,22 @@ body {
   line-height: 1.5;
 }
 
+
+.rainbow-blink {
+  animation: rainbow-blink 1.2s steps(1, end) infinite;
+  font-weight: 700;
+}
+
+@keyframes rainbow-blink {
+  0% { color: #ff4d4d; }
+  16% { color: #ffa64d; }
+  33% { color: #ffe44d; }
+  50% { color: #5dff7a; }
+  66% { color: #4dd2ff; }
+  83% { color: #b84dff; }
+  100% { color: #ff4df0; }
+}
+
 .card-link {
   display: inline-flex;
   margin-top: 12px;
