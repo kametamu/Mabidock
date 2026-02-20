@@ -17,6 +17,11 @@ const dailiesState = {
   },
   hiddenItems: new Set(),
 };
+const trainingTags = ['メイン', 'サブ', 'アルカナ', 'スキル', 'ペット'];
+const trainingState = {
+  tagActive: Object.fromEntries(trainingTags.map((tag) => [tag, true])),
+  openItems: new Set(),
+};
 
 async function loadJson(path) {
   if (cache.has(path)) return cache.get(path);
@@ -133,12 +138,148 @@ function renderArticleSections(entries) {
     .join('');
 }
 
+function renderTrainingSections(entry) {
+  if (!Array.isArray(entry.sections)) {
+    return `<p class="section-content">${escapeHtml(entry.content ?? '')}</p>`;
+  }
+
+  return entry.sections
+    .map((section) => {
+      const tableMarkup = section.table
+        ? `
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  ${section.table.columns
+                    .map((column) => `<th>${escapeHtml(column)}</th>`)
+                    .join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${section.table.rows
+                  .map(
+                    (row) => `
+                    <tr>
+                      ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}
+                    </tr>
+                  `,
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+        : '';
+
+      const contentMarkup = section.content
+        ? `<p class="section-content">${escapeHtml(section.content)}</p>`
+        : '';
+
+      const noteMarkup = section.note
+        ? `<p class="section-note">${escapeHtml(section.note)}</p>`
+        : '';
+
+      return `
+        <div class="section-stack">
+          <h4 class="section-title">${escapeHtml(section.title)}</h4>
+          ${tableMarkup}
+          ${contentMarkup}
+          ${noteMarkup}
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function buildTrainingTagControls() {
+  return `
+    <section class="card dailies-controls">
+      <h3 class="section-title">タグで絞り込み</h3>
+      <div class="toggle-row">
+        ${trainingTags
+          .map(
+            (tag) => `
+            <button
+              class="toggle-chip ${trainingState.tagActive[tag] ? 'on' : 'off'}"
+              type="button"
+              data-training-tag-toggle="${escapeHtml(tag)}"
+            >
+              ${escapeHtml(tag)}
+            </button>
+          `,
+          )
+          .join('')}
+      </div>
+    </section>
+  `;
+}
+
+function bindTrainingControls() {
+  appRoot.querySelectorAll('[data-training-tag-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tag = button.getAttribute('data-training-tag-toggle');
+      trainingState.tagActive[tag] = !trainingState.tagActive[tag];
+      renderTraining();
+    });
+  });
+
+  appRoot.querySelectorAll('[data-training-id]').forEach((details) => {
+    details.addEventListener('toggle', () => {
+      const itemId = details.getAttribute('data-training-id');
+      if (details.open) {
+        trainingState.openItems.add(itemId);
+      } else {
+        trainingState.openItems.delete(itemId);
+      }
+    });
+  });
+}
+
 async function renderTraining() {
   const data = await loadJson('./data/training.json');
+  const withIds = data.map((item, index) => ({
+    ...item,
+    itemId: `${index}:${item.title}`,
+  }));
+  const activeTags = trainingTags.filter((tag) => trainingState.tagActive[tag]);
+  const visible = withIds.filter((item) => {
+    if (!Array.isArray(item.tags) || item.tags.length === 0) return true;
+    return item.tags.some((tag) => activeTags.includes(tag));
+  });
+
   appRoot.innerHTML = `
     ${pageHeader('育成', '育成関連メモの置き場です。')}
-    <section class="section-stack">${renderArticleSections(data)}</section>
+    ${buildTrainingTagControls()}
+    <section class="toolbar-row">
+      <p class="section-content">表示中: ${visible.length} / 全体: ${data.length}</p>
+    </section>
+    <section class="section-stack">
+      ${visible
+        .map(
+          (entry) => `
+          <article class="card">
+            <details class="training-details" data-training-id="${escapeHtml(entry.itemId)}" ${
+              trainingState.openItems.has(entry.itemId) ? 'open' : ''
+            }>
+              <summary>
+                <h3>${escapeHtml(entry.title)}</h3>
+                <div class="inline-tags">
+                  ${(Array.isArray(entry.tags) ? entry.tags : [])
+                    .map((tag) => `<span class="tag training-tag">${escapeHtml(tag)}</span>`)
+                    .join('')}
+                </div>
+              </summary>
+              <div class="section-stack training-body">${renderTrainingSections(entry)}</div>
+            </details>
+          </article>
+        `,
+        )
+        .join('')}
+    </section>
   `;
+
+  bindTrainingControls();
 }
 
 async function renderMoney() {
