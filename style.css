@@ -173,6 +173,75 @@ body {
   padding: 5px 12px;
 }
 
+.inline-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.training-tag {
+  margin: 0;
+}
+
+.training-details {
+  display: grid;
+  gap: 12px;
+}
+
+.training-details summary {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.training-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.training-details summary h3 {
+  margin: 0;
+}
+
+.training-body {
+  padding-top: 6px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.data-table td {
+  color: var(--muted);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.section-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 1fr;
