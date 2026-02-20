@@ -11,11 +11,23 @@ const routes = {
 const cache = new Map();
 const dailiesState = {
   typeActive: {
-    daily: true,
-    weekly: true,
-    monthly: true,
+    daily: false,
+    weekly: false,
+    monthly: false,
   },
   hiddenItems: new Set(),
+};
+const trainingTags = ['メイン', 'サブ', 'アルカナ', 'スキル', 'ペット'];
+const trainingTagClassMap = {
+  メイン: 'training-main',
+  サブ: 'training-sub',
+  アルカナ: 'training-arcana',
+  スキル: 'training-skill',
+  ペット: 'training-pet',
+};
+const trainingState = {
+  tagActive: Object.fromEntries(trainingTags.map((tag) => [tag, false])),
+  openItems: new Set(),
 };
 
 async function loadJson(path) {
@@ -133,12 +145,153 @@ function renderArticleSections(entries) {
     .join('');
 }
 
+function renderTrainingSections(entry) {
+  if (!Array.isArray(entry.sections)) {
+    return `<p class="section-content">${escapeHtml(entry.content ?? '')}</p>`;
+  }
+
+  return entry.sections
+    .map((section) => {
+      const tableMarkup = section.table
+        ? `
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  ${section.table.columns
+                    .map((column) => `<th>${escapeHtml(column)}</th>`)
+                    .join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${section.table.rows
+                  .map(
+                    (row) => `
+                    <tr>
+                      ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}
+                    </tr>
+                  `,
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+        : '';
+
+      const contentMarkup = section.content
+        ? `<p class="section-content">${escapeHtml(section.content)}</p>`
+        : '';
+
+      const noteMarkup = section.note
+        ? `<p class="section-note">${escapeHtml(section.note)}</p>`
+        : '';
+
+      return `
+        <div class="section-stack">
+          <h4 class="section-title">${escapeHtml(section.title)}</h4>
+          ${tableMarkup}
+          ${contentMarkup}
+          ${noteMarkup}
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function buildTrainingTagControls() {
+  return `
+    <section class="card dailies-controls">
+      <h3 class="section-title">タグで絞り込み</h3>
+      <div class="toggle-row">
+        ${trainingTags
+          .map(
+            (tag) => `
+            <button
+              class="toggle-chip ${trainingState.tagActive[tag] ? 'on' : 'off'}"
+              type="button"
+              data-training-tag-toggle="${escapeHtml(tag)}"
+            >
+              ${escapeHtml(tag)}
+            </button>
+          `,
+          )
+          .join('')}
+      </div>
+      <p class="section-content">未選択時は全表示、1つ以上選択時は選択タグに一致する項目のみ表示します。</p>
+    </section>
+  `;
+}
+
+function bindTrainingControls() {
+  appRoot.querySelectorAll('[data-training-tag-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tag = button.getAttribute('data-training-tag-toggle');
+      trainingState.tagActive[tag] = !trainingState.tagActive[tag];
+      renderTraining();
+    });
+  });
+
+  appRoot.querySelectorAll('[data-training-id]').forEach((details) => {
+    details.addEventListener('toggle', () => {
+      const itemId = details.getAttribute('data-training-id');
+      if (details.open) {
+        trainingState.openItems.add(itemId);
+      } else {
+        trainingState.openItems.delete(itemId);
+      }
+    });
+  });
+}
+
 async function renderTraining() {
   const data = await loadJson('./data/training.json');
+  const withIds = data.map((item, index) => ({
+    ...item,
+    itemId: `${index}:${item.title}`,
+  }));
+  const activeTags = trainingTags.filter((tag) => trainingState.tagActive[tag]);
+  const visible = withIds.filter((item) => {
+    if (activeTags.length === 0) return true;
+    if (!Array.isArray(item.tags) || item.tags.length === 0) return false;
+    return item.tags.some((tag) => activeTags.includes(tag));
+  });
+
   appRoot.innerHTML = `
     ${pageHeader('育成', '育成関連メモの置き場です。')}
-    <section class="section-stack">${renderArticleSections(data)}</section>
+    ${buildTrainingTagControls()}
+    <section class="toolbar-row">
+      <p class="section-content">表示中: ${visible.length} / 全体: ${data.length}</p>
+    </section>
+    <section class="section-stack">
+      ${visible
+        .map(
+          (entry) => `
+          <article class="card">
+            <details class="training-details" data-training-id="${escapeHtml(entry.itemId)}" ${
+              trainingState.openItems.has(entry.itemId) ? 'open' : ''
+            }>
+              <summary>
+                <h3>${escapeHtml(entry.title)}</h3>
+                <div class="item-tags">
+                  ${(Array.isArray(entry.tags) ? entry.tags : [])
+                    .map(
+                      (tag) =>
+                        `<span class="tag ${escapeHtml(trainingTagClassMap[tag] ?? 'training-main')}">${escapeHtml(tag)}</span>`,
+                    )
+                    .join('')}
+                </div>
+              </summary>
+              <div class="section-stack training-body">${renderTrainingSections(entry)}</div>
+            </details>
+          </article>
+        `,
+        )
+        .join('')}
+    </section>
   `;
+
+  bindTrainingControls();
 }
 
 async function renderMoney() {
@@ -153,7 +306,7 @@ function buildDailiesFilterControls() {
   const types = ['daily', 'weekly', 'monthly'];
   return `
     <section class="card dailies-controls">
-      <h3 class="section-title">表示フィルター（アクティブ / 非アクティブ）</h3>
+      <h3 class="section-title">タグで絞り込み</h3>
       <div class="toggle-row">
         ${types
           .map(
@@ -163,12 +316,13 @@ function buildDailiesFilterControls() {
               type="button"
               data-type-toggle="${type}"
             >
-              ${escapeHtml(type)}: ${dailiesState.typeActive[type] ? 'アクティブ' : '非アクティブ'}
+              ${escapeHtml(type)}
             </button>
           `,
           )
           .join('')}
       </div>
+      <p class="section-content">未選択時は全表示、1つ以上選択時は選択タグに一致する項目のみ表示します。</p>
       <p class="section-content">「完了して非表示」を押した項目は、このページを開いている間だけ非表示になります。再読込すると元に戻ります。</p>
     </section>
   `;
@@ -207,7 +361,14 @@ async function renderDailies() {
     itemId: `${item.type}:${index}:${item.title}`,
   }));
 
-  const visible = withIds.filter((item) => dailiesState.typeActive[item.type] && !dailiesState.hiddenItems.has(item.itemId));
+  const activeTypes = Object.entries(dailiesState.typeActive)
+    .filter(([, isActive]) => isActive)
+    .map(([type]) => type);
+
+  const visible = withIds.filter((item) => {
+    const passesTagFilter = activeTypes.length === 0 || activeTypes.includes(item.type);
+    return passesTagFilter && !dailiesState.hiddenItems.has(item.itemId);
+  });
 
   appRoot.innerHTML = `
     ${pageHeader('日課', 'daily / weekly / monthly を見やすく表示します。')}
